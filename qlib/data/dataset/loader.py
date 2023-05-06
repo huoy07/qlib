@@ -17,6 +17,8 @@ from qlib.utils.serial import Serializable
 
 class DataLoader(abc.ABC):
     """
+    抽象类，仅有一个load()虚函数。
+
     DataLoader is designed for loading raw data from original data source.
     """
 
@@ -55,6 +57,8 @@ class DataLoader(abc.ABC):
 
 class DLWParser(DataLoader):
     """
+    带有Expression的DataLoader，对config信息会进行补全。
+
     (D)ata(L)oader (W)ith (P)arser for features and names
 
     Extracting this class so that QlibDataLoader and other dataloaders(such as QdbDataLoader) can share the fields.
@@ -79,14 +83,17 @@ class DLWParser(DataLoader):
                 <fields_info> := ["expr", ...] | (["expr", ...], ["col_name", ...])
                 # NOTE: list or tuple will be treated as the things when parsing
         """
+        # 判读传入的是否为dict类型
         self.is_group = isinstance(config, dict)
-
+        # 如果为dict，则遍历其中的所有list或tuple，逐个交给_parse_fields_info()处理
         if self.is_group:
             self.fields = {grp: self._parse_fields_info(fields_info) for grp, fields_info in config.items()}
         else:
+            # 如果传入config不是dict类型，则直接交给_parse_fields_info()处理
             self.fields = self._parse_fields_info(config)
 
     def _parse_fields_info(self, fields_info: Union[list, tuple]) -> Tuple[list, list]:
+        """ 对fields_info进行补全，形成 key:(['exp1',...], ['name1',...]) 这样的结构 """
         if len(fields_info) == 0:
             raise ValueError("The size of fields must be greater than 0")
 
@@ -202,6 +209,7 @@ class QlibDataLoader(DLWParser):
         end_time: Union[str, pd.Timestamp] = None,
         gp_name: str = None,
     ) -> pd.DataFrame:
+        """ 底层调用D.feature获取指定tkr在指定时间段内的指定feature，并予以过滤 """
         if instruments is None:
             warnings.warn("`instruments` is not set, will load all stocks")
             instruments = "all"

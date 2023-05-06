@@ -138,6 +138,9 @@ class MemCache:
 
     def __init__(self, mem_cache_size_limit=None, limit_type="length"):
         """
+        根据limit_type，用限制数量的MemCacheLengthUnit 或者 限制大小的MemCacheSizeofUnit 去初始化
+        self.__calendar_mem_cache  self.__instrument_mem_cache  self.__feature_mem_cache
+        以加快获取日历、标的和特征数据的速度。
 
         Parameters
         ----------

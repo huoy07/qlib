@@ -403,28 +403,29 @@ class QlibConfig(Config):
             the default config template chosen by user: "server", "client"
         """
         from .utils import set_log_with_config, get_module_logger, can_use_cache  # pylint: disable=C0415
-
+        # 先将所有参数设置为_default_config
         self.reset()
-
+        # 保存config文件的方式及地址，为dict变量，默认为_default_config中的logging_config
         _logging_config = kwargs.get("logging_config", self.logging_config)
-
+        # 如果_logging_config不为空，则设置一个位置对全局config进行保存
         # set global config
         if _logging_config:
             set_log_with_config(_logging_config)
-
+        # 从刚才存储的位置中读取Initialization的config
         logger = get_module_logger("Initialization", kwargs.get("logging_level", self.logging_level))
         logger.info(f"default_conf: {default_conf}.")
-
+        # 设置mode为client，这里输入client/server表示客户端（本地）/服务器
         self.set_mode(default_conf)
+        # 设置地区，默认为cn（中国）
         self.set_region(kwargs.get("region", self["region"] if "region" in self else REG_CN))
-
+        # 遍历kwargs，如果存在不能识别的参数，则重新添加C中
         for k, v in kwargs.items():
             if k not in self:
                 logger.warning("Unrecognized config %s" % k)
             self[k] = v
-
+        # 解析kwargs中的provider_uri
         self.resolve_path()
-
+        # 如果没有指定缓存地址，则检查是否可以使用redis，通常情况下我们使用内存作为缓存，下面这段可以不看
         if not (self["expression_cache"] is None and self["dataset_cache"] is None):
             # check redis
             if not can_use_cache():
@@ -449,19 +450,22 @@ class QlibConfig(Config):
         from .data.data import register_all_wrappers  # pylint: disable=C0415
         from .workflow import R, QlibRecorder  # pylint: disable=C0415
         from .workflow.utils import experiment_exit_handler  # pylint: disable=C0415
-
+        # 初始化所有operator
         register_all_ops(self)
+        # 初始化所有Wrapper
         register_all_wrappers(self)
+        # 初始化QLibRecorder
         # set up QlibRecorder
         exp_manager = init_instance_by_config(self["exp_manager"])
         qr = QlibRecorder(exp_manager)
         R.register(qr)
+        # 初始化一个退出处理器，在python程序关闭的时候关闭experiment
         # clean up experiment when python program ends
         experiment_exit_handler()
-
+        # 版本适配
         # Supporting user reset qlib version (useful when user want to connect to qlib server with old version)
         self.reset_qlib_version()
-
+        # 将自身设为`registered`状态，表示已经执行register
         self._registered = True
 
     def reset_qlib_version(self):

@@ -48,6 +48,10 @@ class Processor(Serializable):
     @abc.abstractmethod
     def __call__(self, df: pd.DataFrame):
         """
+        # 核心操作逻辑
+        # 如果这里返回df的引用，readonly里面需要return False
+        # 如果返回的是与传入df_orignal不同内存地址的df_new，readonly里面需要return True
+
         process the data
 
         NOTE: **The processor could change the content of `df` inplace !!!!! **
@@ -61,6 +65,10 @@ class Processor(Serializable):
 
     def is_for_infer(self) -> bool:
         """
+        # 该processor是否对infer(test)可用，默认为True
+        # 如果该processor包含的操作只能作用于learn(train)，则设为False
+        # 举个例子，我们如果想定义一个对label操作的processor，由于test中没有label，此时就要设为False
+
         Is this processor usable for inference
         Some processors are not usable for inference.
 
@@ -73,6 +81,10 @@ class Processor(Serializable):
 
     def readonly(self) -> bool:
         """
+        # 注意是readonly(read only)，不是randomly！！！
+        # 用于判断返回的df是不是原来传入__call__()的df的引用，如果是引用则返回False
+        # return True 代表返回的是一个新的df_new(原来df的视图)，对他操作不会影响原来的df_orignal
+
         Does the processor treat the input data readonly (i.e. does not write the input data) when processing
 
         Knowning the readonly information is helpful to the Handler to avoid uncessary copy
@@ -92,6 +104,7 @@ class Processor(Serializable):
 
 
 class DropnaProcessor(Processor):
+    """ 去除fields_group指定列中有nan的行 """
     def __init__(self, fields_group=None):
         self.fields_group = fields_group
 
@@ -103,6 +116,7 @@ class DropnaProcessor(Processor):
 
 
 class DropnaLabel(DropnaProcessor):
+    """ 去除label这一列中有nan的行 """
     def __init__(self, fields_group="label"):
         super().__init__(fields_group=fields_group)
 
@@ -112,6 +126,7 @@ class DropnaLabel(DropnaProcessor):
 
 
 class DropCol(Processor):
+    """ 去除col_list这些列 """
     def __init__(self, col_list=[]):
         self.col_list = col_list
 
@@ -127,6 +142,7 @@ class DropCol(Processor):
 
 
 class FilterCol(Processor):
+    """ 去除fields_group指定的列和col_list中指定的列 """
     def __init__(self, fields_group="feature", col_list=[]):
         self.fields_group = fields_group
         self.col_list = col_list
@@ -145,6 +161,7 @@ class FilterCol(Processor):
 
 
 class TanhProcess(Processor):
+    """ 使用np.tanh进行降噪 """
     """Use tanh to process noise data"""
 
     def __call__(self, df):
@@ -160,6 +177,7 @@ class TanhProcess(Processor):
 
 
 class ProcessInf(Processor):
+    """ 将inf替换成均值 """
     """Process infinity"""
 
     def __call__(self, df):
@@ -178,6 +196,7 @@ class ProcessInf(Processor):
 
 
 class Fillna(Processor):
+    """ 用指定值填充nan """
     """Process NaN"""
 
     def __init__(self, fields_group=None, fill_value=0):
@@ -200,6 +219,7 @@ class Fillna(Processor):
 
 
 class MinMaxNorm(Processor):
+    """ 取每一列的最大最小值，然后x-min/max-min """
     def __init__(self, fit_start_time, fit_end_time, fields_group=None):
         # NOTE: correctly set the `fit_start_time` and `fit_end_time` is very important !!!
         # `fit_end_time` **must not** include any information from the test data!!!
@@ -232,6 +252,8 @@ class MinMaxNorm(Processor):
 
 
 class ZScoreNorm(Processor):
+    """ 列(x-mean)/std """
+
     """ZScore Normalization"""
 
     def __init__(self, fit_start_time, fit_end_time, fields_group=None):

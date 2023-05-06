@@ -969,6 +969,9 @@ def auto_filter_kwargs(func: Callable, warning=True) -> Callable:
 
 #################### Wrapper #####################
 class Wrapper:
+    """
+    将外部provider注册到self._provider的一个皮。
+    """
     """Wrapper class for anything that needs to set up during qlib.init"""
 
     def __init__(self):
@@ -987,6 +990,9 @@ class Wrapper:
 
 
 def register_wrapper(wrapper, cls_or_obj, module_path=None):
+    """
+    wrapper.register(cls_or_obj对应的实例)
+    """
     """register_wrapper
 
     :param wrapper: A wrapper.

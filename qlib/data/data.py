@@ -69,6 +69,9 @@ class CalendarProvider(abc.ABC):
     """
 
     def calendar(self, start_time=None, end_time=None, freq="day", future=False):
+        """
+        先获取所有的calendar，然后截取出参数限定的部分。
+        """
         """Get calendar of certain market in given time range.
 
         Parameters
@@ -87,6 +90,7 @@ class CalendarProvider(abc.ABC):
         list
             calendar list
         """
+        # 拿到所有calendar数据及其索引
         _calendar, _calendar_index = self._get_calendar(freq, future)
         if start_time == "None":
             start_time = None
@@ -105,6 +109,7 @@ class CalendarProvider(abc.ABC):
                 return np.array([])
         else:
             end_time = _calendar[-1]
+        # 获得start_id和end_i
         _, _, si, ei = self.locate_index(start_time, end_time, freq, future)
         return _calendar[si : ei + 1]
 
@@ -636,6 +641,10 @@ class DatasetProvider(abc.ABC):
 
 
 class LocalCalendarProvider(CalendarProvider, ProviderBackendMixin):
+    """
+
+    """
+
     """Local calendar data provider class
 
     Provide calendar data from local data source.
@@ -1140,6 +1149,9 @@ class ClientDatasetProvider(DatasetProvider):
 
 
 class BaseProvider:
+    """
+    提供了LocalCalendarProvider LocalInstrumentProvider  和 LocalDatasetProvider 实例。
+    """
     """Local provider class
     It is a set of interface that allow users to access data.
     Because PITD is not exposed publicly to users, so it is not included in the interface.
@@ -1193,6 +1205,9 @@ class BaseProvider:
 
 
 class LocalProvider(BaseProvider):
+    """
+    在BaseProvider基础上提供了一个统一的获取uri接口。
+    """
     def _uri(self, type, **kwargs):
         """_uri
         The server hope to get the uri of the request. The uri will be decided
@@ -1295,7 +1310,7 @@ def register_all_wrappers(C):
     """register_all_wrappers"""
     logger = get_module_logger("data")
     module = get_module_by_module_path("qlib.data")
-
+    # 为CalendarProviderWrapper注册LocalCalendarProvider
     _calendar_provider = init_instance_by_config(C.calendar_provider, module)
     if getattr(C, "calendar_cache", None) is not None:
         _calendar_provider = init_instance_by_config(C.calendar_cache, module, provide=_calendar_provider)
@@ -1305,17 +1320,17 @@ def register_all_wrappers(C):
     _instrument_provider = init_instance_by_config(C.instrument_provider, module)
     register_wrapper(Inst, _instrument_provider, "qlib.data")
     logger.debug(f"registering Inst {C.instrument_provider}")
-
+    # 为FeatureProviderWrapper注册LocalFeatureProvider
     if getattr(C, "feature_provider", None) is not None:
         feature_provider = init_instance_by_config(C.feature_provider, module)
         register_wrapper(FeatureD, feature_provider, "qlib.data")
         logger.debug(f"registering FeatureD {C.feature_provider}")
-
+    # 为PITProviderWrapper注册LocalPITProvider
     if getattr(C, "pit_provider", None) is not None:
         pit_provider = init_instance_by_config(C.pit_provider, module)
         register_wrapper(PITD, pit_provider, "qlib.data")
         logger.debug(f"registering PITD {C.pit_provider}")
-
+    # 为ExpressionProviderWrapper注册LocalExpressionProvider
     if getattr(C, "expression_provider", None) is not None:
         # This provider is unnecessary in client provider
         _eprovider = init_instance_by_config(C.expression_provider, module)
@@ -1323,7 +1338,7 @@ def register_all_wrappers(C):
             _eprovider = init_instance_by_config(C.expression_cache, module, provider=_eprovider)
         register_wrapper(ExpressionD, _eprovider, "qlib.data")
         logger.debug(f"registering ExpressionD {C.expression_provider}-{C.expression_cache}")
-
+    # 为DatasetProviderWrapper注册LocalDatasetProvider
     _dprovider = init_instance_by_config(C.dataset_provider, module)
     if getattr(C, "dataset_cache", None) is not None:
         _dprovider = init_instance_by_config(C.dataset_cache, module, provider=_dprovider)

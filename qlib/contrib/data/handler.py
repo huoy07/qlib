@@ -9,11 +9,25 @@ from inspect import getfullargspec
 
 
 def check_transform_proc(proc_l, fit_start_time, fit_end_time):
+    """
+    定义这个函数的原因是：由于我们有时传入的proc_l并不是直接传入实例，而是如下结构
+    _DEFAULT_LEARN_PROCESSORS = [
+    {"class": "DropnaLabel"},
+    {"class": "CSZScoreNorm", "kwargs": {"fields_group": "label"}},
+    ]
+    _DEFAULT_INFER_PROCESSORS = [
+        {"class": "ProcessInf", "kwargs": {}},
+        {"class": "ZScoreNorm", "kwargs": {}},
+        {"class": "Fillna", "kwargs": {}},
+    ]
+    """
     new_l = []
     for p in proc_l:
         if not isinstance(p, Processor):
+            # 如果传入的是config而不是Processor实例，则将传入的config转变为可以被DataHandlerLP识别的processors config
             klass, pkwargs = get_callable_kwargs(p, processor_module)
             args = getfullargspec(klass).args
+            # 检查handler的参数中是否给了fit_start_time和fit_end_time，这两个参数尤其重要
             if "fit_start_time" in args and "fit_end_time" in args:
                 assert (
                     fit_start_time is not None and fit_end_time is not None
@@ -29,6 +43,7 @@ def check_transform_proc(proc_l, fit_start_time, fit_end_time):
                 proc_config["module_path"] = p["module_path"]
             new_l.append(proc_config)
         else:
+            # 如果直接传入processors实例，则直接塞进new_l中
             new_l.append(p)
     return new_l
 
@@ -193,6 +208,7 @@ class Alpha158(DataHandlerLP):
         return self.parse_config_to_fields(conf)
 
     def get_label_config(self):
+        """ 含义：预测目标的名字是LABEL0，值是close的涨跌幅 """
         return ["Ref($close, -2)/Ref($close, -1) - 1"], ["LABEL0"]
 
     @staticmethod
@@ -430,3 +446,4 @@ class Alpha158(DataHandlerLP):
 class Alpha158vwap(Alpha158):
     def get_label_config(self):
         return ["Ref($vwap, -2)/Ref($vwap, -1) - 1"], ["LABEL0"]
+
